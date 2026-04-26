@@ -1,7 +1,13 @@
 import { z } from "zod";
 import { defineTool, type Tool } from "../utils/tool.js";
 import { publisher, publisherAny } from "../auth/client-factory.js";
-import { packageNameArg, productIdArg } from "../utils/schemas.js";
+import {
+  packageNameArg,
+  productIdArg,
+  regionsVersionArg,
+  flattenRegionsVersion,
+  normalizeRegionsVersionBody,
+} from "../utils/schemas.js";
 
 /**
  * monetization.subscriptions — catalog for subscription products.
@@ -47,7 +53,7 @@ export const subscriptionTools: Tool[] = [
         packageName: packageNameArg,
         productId: productIdArg,
         subscription: z.record(z.any()).describe("Subscription resource body"),
-        regionsVersion: z.record(z.any()).optional(),
+        regionsVersion: regionsVersionArg,
       })
       .strict(),
     handler: async ({ packageName, productId, subscription, regionsVersion }) => {
@@ -55,7 +61,7 @@ export const subscriptionTools: Tool[] = [
         packageName,
         productId,
         requestBody: subscription,
-        regionsVersion,
+        ...flattenRegionsVersion(regionsVersion),
       });
       return res.data;
     },
@@ -69,17 +75,18 @@ export const subscriptionTools: Tool[] = [
         productId: productIdArg,
         subscription: z.record(z.any()),
         updateMask: z.string().optional(),
-        regionsVersion: z.record(z.any()).optional(),
+        regionsVersion: regionsVersionArg,
         latencyTolerance: z.string().optional(),
         allowMissing: z.boolean().optional(),
       })
       .strict(),
-    handler: async ({ packageName, productId, subscription, ...rest }) => {
+    handler: async ({ packageName, productId, subscription, regionsVersion, ...rest }) => {
       const res = await (await publisher()).monetization.subscriptions.patch({
         packageName,
         productId,
         requestBody: subscription,
         ...rest,
+        ...flattenRegionsVersion(regionsVersion),
       });
       return res.data;
     },
@@ -212,16 +219,22 @@ export const subscriptionTools: Tool[] = [
         productId: productIdArg,
         basePlanId: z.string(),
         regionalPriceMigrations: z.array(z.record(z.any())),
-        regionsVersion: z.record(z.any()).optional(),
+        regionsVersion: regionsVersionArg,
         latencyTolerance: z.string().optional(),
       })
       .strict(),
-    handler: async ({ packageName, productId, basePlanId, ...body }) => {
+    handler: async ({ packageName, productId, basePlanId, regionsVersion, ...body }) => {
+      const normalizedRegionsVersion = normalizeRegionsVersionBody(regionsVersion);
       const res = await (await publisher()).monetization.subscriptions.basePlans.migratePrices({
         packageName,
         productId,
         basePlanId,
-        requestBody: body,
+        requestBody: {
+          ...body,
+          ...(normalizedRegionsVersion
+            ? { regionsVersion: normalizedRegionsVersion }
+            : {}),
+        },
       });
       return res.data;
     },
@@ -328,7 +341,7 @@ export const subscriptionTools: Tool[] = [
         basePlanId: z.string(),
         offerId: z.string(),
         offer: z.record(z.any()),
-        regionsVersion: z.record(z.any()).optional(),
+        regionsVersion: regionsVersionArg,
       })
       .strict(),
     handler: async ({ packageName, productId, basePlanId, offerId, offer, regionsVersion }) => {
@@ -337,8 +350,8 @@ export const subscriptionTools: Tool[] = [
         productId,
         basePlanId,
         offerId,
-        regionsVersion,
         requestBody: offer,
+        ...flattenRegionsVersion(regionsVersion),
       });
       return res.data;
     },
@@ -354,12 +367,12 @@ export const subscriptionTools: Tool[] = [
         offerId: z.string(),
         offer: z.record(z.any()),
         updateMask: z.string().optional(),
-        regionsVersion: z.record(z.any()).optional(),
+        regionsVersion: regionsVersionArg,
         allowMissing: z.boolean().optional(),
         latencyTolerance: z.string().optional(),
       })
       .strict(),
-    handler: async ({ packageName, productId, basePlanId, offerId, offer, ...rest }) => {
+    handler: async ({ packageName, productId, basePlanId, offerId, offer, regionsVersion, ...rest }) => {
       const res = await (await publisher()).monetization.subscriptions.basePlans.offers.patch({
         packageName,
         productId,
@@ -367,6 +380,7 @@ export const subscriptionTools: Tool[] = [
         offerId,
         requestBody: offer,
         ...rest,
+        ...flattenRegionsVersion(regionsVersion),
       });
       return res.data;
     },

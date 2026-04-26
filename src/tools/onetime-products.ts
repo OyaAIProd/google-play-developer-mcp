@@ -1,7 +1,12 @@
 import { z } from "zod";
 import { defineTool, type Tool } from "../utils/tool.js";
 import { publisher, publisherAny } from "../auth/client-factory.js";
-import { packageNameArg, productIdArg } from "../utils/schemas.js";
+import {
+  packageNameArg,
+  productIdArg,
+  regionsVersionArg,
+  flattenRegionsVersion,
+} from "../utils/schemas.js";
 
 /**
  * monetization.onetimeproducts — the new (2025+) catalog API for
@@ -47,7 +52,7 @@ export const onetimeProductTools: Tool[] = [
         packageName: packageNameArg,
         productId: productIdArg,
         product: z.record(z.any()).describe("OneTimeProduct resource body"),
-        regionsVersion: z.record(z.any()).optional(),
+        regionsVersion: regionsVersionArg,
       })
       .strict(),
     handler: async ({ packageName, productId, product, regionsVersion }) => {
@@ -55,9 +60,9 @@ export const onetimeProductTools: Tool[] = [
         packageName,
         productId,
         requestBody: product,
-        regionsVersion,
         allowMissing: true,
         latencyTolerance: "PRODUCT_UPDATE_LATENCY_TOLERANCE_LATENCY_TOLERANT",
+        ...flattenRegionsVersion(regionsVersion),
       });
       return res.data;
     },
@@ -71,7 +76,7 @@ export const onetimeProductTools: Tool[] = [
         productId: productIdArg,
         product: z.record(z.any()),
         updateMask: z.string().optional(),
-        regionsVersion: z.record(z.any()).optional(),
+        regionsVersion: regionsVersionArg,
         latencyTolerance: z.string().optional(),
       })
       .strict(),
@@ -81,8 +86,8 @@ export const onetimeProductTools: Tool[] = [
         productId,
         updateMask,
         requestBody: product,
-        regionsVersion,
         latencyTolerance,
+        ...flattenRegionsVersion(regionsVersion),
       });
       return res.data;
     },

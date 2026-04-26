@@ -1,6 +1,6 @@
 {
   "name": "google-play-developer-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A complete MCP (Model Context Protocol) server for the Google Play Developer API — covers the full Android Publisher API v3 (edits, monetization, purchases v2, orders, reviews, users, app recovery) and the Play Developer Reporting API v1beta1 (crash/ANR/errors/anomalies). Lets AI assistants manage the entire Google Play Console lifecycle.",
   "keywords": [
     "mcp",

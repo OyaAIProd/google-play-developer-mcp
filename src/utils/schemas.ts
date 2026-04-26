@@ -37,6 +37,58 @@ export const optionalAutoCommit = z
   .describe("Default true. When true, the MCP opens an edit, applies the change, and commits.");
 
 /**
+ * `regionsVersion` is a Google Discovery-style flat query parameter
+ * (`regionsVersion.version=...`), NOT a nested object. The `googleapis`
+ * SDK expects it as the flat key `'regionsVersion.version'`; passing a
+ * nested object causes bracket-encoded query strings that Play rejects.
+ *
+ * Accept either a plain version string (`"2022/02"`) or the original
+ * `{ version: "2022/02" }` shape, then flatten with `flattenRegionsVersion`
+ * before handing to the SDK.
+ */
+export const regionsVersionArg = z
+  .union([z.string(), z.record(z.any())])
+  .optional()
+  .describe(
+    'Regions catalog version, e.g. "2022/02". Accepts either a version string or { version: "2022/02" }.',
+  );
+
+export function flattenRegionsVersion(
+  input: string | Record<string, unknown> | undefined,
+): Record<string, string> {
+  const version = extractRegionsVersion(input);
+  return version ? { "regionsVersion.version": version } : {};
+}
+
+/**
+ * For the few endpoints where `regionsVersion` is a request *body* field
+ * (not a query param) — notably `basePlans.migratePrices` — the SDK
+ * expects a nested `{ version: "..." }` shape. Normalizes either string
+ * or nested input to that shape, or returns `undefined` to omit.
+ */
+export function normalizeRegionsVersionBody(
+  input: string | Record<string, unknown> | undefined,
+): { version: string } | undefined {
+  const version = extractRegionsVersion(input);
+  return version ? { version } : undefined;
+}
+
+function extractRegionsVersion(
+  input: string | Record<string, unknown> | undefined,
+): string | undefined {
+  if (input === undefined || input === null) return undefined;
+  if (typeof input === "string") return input || undefined;
+  if (typeof input === "object") {
+    const version =
+      (input as { version?: unknown }).version ??
+      (input as { regionsVersion?: { version?: unknown } }).regionsVersion
+        ?.version;
+    if (typeof version === "string" && version.length > 0) return version;
+  }
+  return undefined;
+}
+
+/**
  * Convert a zod schema to MCP's JSON Schema representation. The SDK
  * accepts JSON Schema but zod is nicer to write; json-schema isn't a
  * dependency so we roll a tiny subset that covers our tools.
