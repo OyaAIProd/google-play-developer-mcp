@@ -1,6 +1,24 @@
 # Changelog
 
-All notable changes to this project follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.1.1] — 2026-04-26
+
+Bug fix for the Play monetization catalog endpoints.
+
+### Fixed
+
+- **`regionsVersion` query encoding rejected by Play API.** The googleapis SDK serialises Discovery-style flat query params, so `regionsVersion` must be supplied as the flat key `'regionsVersion.version'`. Passing the original `{ version: "2022/02" }` object produced bracket-encoded query strings (`regionsVersion[version]=...`) that Play returned 400 for. The four affected catalog tools now accept either a plain string (`"2022/02"`) or the original nested shape, and flatten before calling the SDK:
+  - `monetization.onetimeproducts.patch`
+  - `monetization.subscriptions.patch`
+  - `monetization.subscriptions.basePlans.offers.patch`
+
+  `monetization.subscriptions.basePlans.migratePrices` is the one endpoint where `regionsVersion` is a *body* field rather than a query param; it continues to receive the nested `{ version }` shape, normalised from either input form.
+
+### Build
+
+- Added a `postbuild` step that `chmod +x dist/index.js`, so the `bin` entry stays executable on clean builds.
 
 ## [0.1.0] — 2026-04-20
 
